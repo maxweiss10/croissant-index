@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SF Croissant Index</title>
+<meta name="description" content="Blind-tasting scorecard and rankings for San Francisco croissants.">
+<meta name="theme-color" content="#fcfcfb">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%F0%9F%A5%90</text></svg>">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true">🥐</span>
+    <div>
+      <h1>SF Croissant Index</h1>
+      <p class="tagline">Five criteria, one score out of 100. No paywall.</p>
+    </div>
+  </div>
+  <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch color theme">
+    <span data-theme-icon>◐</span>
+  </button>
+</header>
+
+<nav class="tabs" role="tablist" aria-label="Sections">
+  <button class="tab" role="tab" id="tab-rankings" aria-controls="panel-rankings" aria-selected="true">Rankings</button>
+  <button class="tab" role="tab" id="tab-log" aria-controls="panel-log" aria-selected="false">Log a tasting</button>
+  <button class="tab" role="tab" id="tab-chart" aria-controls="panel-chart" aria-selected="false">Price vs. score</button>
+  <button class="tab" role="tab" id="tab-data" aria-controls="panel-data" aria-selected="false">Data</button>
+</nav>
+
+<main>
+  <!-- Rankings -->
+  <section class="panel" id="panel-rankings" role="tabpanel" aria-labelledby="tab-rankings">
+    <div class="stat-row" id="summary-stats"></div>
+
+    <div class="controls">
+      <label class="field inline">
+        <span>Sort by</span>
+        <select id="sort-by">
+          <option value="score">Score</option>
+          <option value="value">Value (points per $)</option>
+          <option value="price">Price</option>
+          <option value="count">Most tastings</option>
+        </select>
+      </label>
+      <label class="field inline">
+        <span>Taster</span>
+        <select id="filter-taster"><option value="">Everyone</option></select>
+      </label>
+    </div>
+
+    <ol class="ranking" id="ranking-list"></ol>
+    <p class="empty" id="ranking-empty" hidden>No tastings yet. Head to <b>Log a tasting</b> and score your first croissant.</p>
+
+    <h2 class="section-head">Not yet tasted</h2>
+    <ul class="untasted" id="untasted-list"></ul>
+  </section>
+
+  <!-- Log a tasting -->
+  <section class="panel" id="panel-log" role="tabpanel" aria-labelledby="tab-log" hidden>
+    <form id="tasting-form" novalidate>
+      <div class="row">
+        <label class="field">
+          <span>Bakery</span>
+          <select id="bakery-select" required>
+            <option value="">Choose a bakery…</option>
+            <option value="__new">＋ Add a new bakery</option>
+          </select>
+        </label>
+        <label class="field">
+          <span>Taster</span>
+          <input id="taster" type="text" placeholder="Your name" autocomplete="name" required>
+        </label>
+      </div>
+
+      <div class="row new-bakery" id="new-bakery-fields" hidden>
+        <label class="field">
+          <span>Bakery name</span>
+          <input id="new-bakery-name" type="text" placeholder="e.g. Hahdough">
+        </label>
+        <label class="field">
+          <span>Neighborhood</span>
+          <input id="new-bakery-hood" type="text" placeholder="e.g. Outer Sunset">
+        </label>
+      </div>
+
+      <div class="row">
+        <label class="field">
+          <span>Price paid</span>
+          <input id="price" type="number" min="0" max="30" step="0.25" inputmode="decimal" placeholder="5.75" required>
+        </label>
+        <label class="field">
+          <span>Date</span>
+          <input id="date" type="date" required>
+        </label>
+      </div>
+
+      <fieldset class="criteria">
+        <legend>Score each criterion, 1–10</legend>
+        <div id="sliders"></div>
+      </fieldset>
+
+      <div class="live-score" aria-live="polite">
+        <span class="live-score-label">Combined score</span>
+        <output id="live-score">60</output>
+        <span class="live-score-of">/ 100</span>
+      </div>
+
+      <label class="field">
+        <span>Notes</span>
+        <textarea id="notes" rows="3" placeholder="Shattered everywhere. Honeycomb for days. Slightly underbaked at the core."></textarea>
+      </label>
+
+      <div class="form-actions">
+        <button class="btn primary" type="submit">Save tasting</button>
+        <button class="btn" type="reset">Clear</button>
+      </div>
+      <p class="form-msg" id="form-msg" role="status"></p>
+    </form>
+  </section>
+
+  <!-- Chart -->
+  <section class="panel" id="panel-chart" role="tabpanel" aria-labelledby="tab-chart" hidden>
+    <h2 class="chart-title">Price vs. score</h2>
+    <p class="chart-sub">Every tasted bakery, average price against average combined score. Anything below and to the right of the pack is punching above its price.</p>
+    <figure class="chart-figure">
+      <div class="chart-wrap" id="chart-wrap">
+        <svg id="scatter" viewBox="0 0 640 400" role="img" aria-labelledby="scatter-title"></svg>
+        <div class="tooltip" id="chart-tooltip" hidden></div>
+      </div>
+      <figcaption>Bubble size is the number of tastings logged.</figcaption>
+    </figure>
+    <p class="empty" id="chart-empty" hidden>Log a tasting with a price to plot the first point.</p>
+    <details class="table-view">
+      <summary>Table view</summary>
+      <div class="table-scroll">
+        <table id="chart-table">
+          <thead><tr><th scope="col">Bakery</th><th scope="col">Score</th><th scope="col">Avg price</th><th scope="col">Pts / $</th><th scope="col">Tastings</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <!-- Data -->
+  <section class="panel" id="panel-data" role="tabpanel" aria-labelledby="tab-data" hidden>
+    <p class="note">Everything lives in this browser's local storage — nothing is uploaded. Export the file and send it around to merge the group's tastings.</p>
+    <div class="form-actions wrap">
+      <button class="btn primary" id="copy-summary" type="button">Copy rankings for the group chat</button>
+      <button class="btn" id="export-json" type="button">Export JSON</button>
+      <label class="btn file-btn">Import JSON<input id="import-json" type="file" accept="application/json,.json" hidden></label>
+      <button class="btn danger" id="reset-all" type="button">Reset everything</button>
+    </div>
+    <p class="form-msg" id="data-msg" role="status"></p>
+
+    <h2 class="section-head">All tastings</h2>
+    <div class="table-scroll">
+      <table id="tastings-table">
+        <thead><tr><th scope="col">Date</th><th scope="col">Bakery</th><th scope="col">Taster</th><th scope="col">Price</th><th scope="col">Score</th><th scope="col"><span class="sr-only">Delete</span></th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <p class="empty" id="tastings-empty" hidden>Nothing logged yet.</p>
+  </section>
+</main>
+
+<footer class="app-footer">
+  <p>Scores are your group's own blind-tasting numbers — the seeded bakery list is just a starting lineup, edit it as you go.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
